@@ -1,0 +1,5 @@
+export type EvidenceType = 'FACT' | 'CALCULATION' | 'INFERENCE' | 'OPINION';
+export type AgentStatus = 'COMPLETED' | 'UNKNOWN' | 'FAILED';
+export interface AgentEvidence { id: string; type: EvidenceType; label: string; metric?: string; value?: number | null; }
+export interface AgentError { code: 'AGENT_INPUT_INVALID' | 'LLM_ERROR' | 'AGENT_OUTPUT_INVALID' | 'EVIDENCE_MISMATCH' | 'ASSET_SCOPE_MISMATCH' | 'FACT_SCOPE_MISMATCH'; message: string; retryable: boolean; }
+export interface AgentRunEnvelope<T> { runId: string; agent: 'macro' | 'global_market' | 'korea_market' | 'news' | 'research' | 'fundamental' | 'risk' | 'devils_advocate' | 'cio'; agentVersion: 'm3a-v1' | 'm3b-v1' | 'm3c-v1' | 'm3d-v1' | 'm3e-v1' | 'm3f-v1' | 'm3g-v1' | 'm3h-v1' | 'm3i-v1'; promptVersion: 'macro-agent-v1' | 'global-market-agent-v1' | 'korea-market-agent-v1' | 'news-agent-v1' | 'research-agent-v1' | 'fundamental-agent-v1' | 'risk-agent-v1' | 'devils-advocate-agent-v1' | 'cio-agent-v1'; status: AgentStatus; inputAsOfTime: string | null; startedAt: string; finishedAt: string; output: T | null; errors: AgentError[]; }

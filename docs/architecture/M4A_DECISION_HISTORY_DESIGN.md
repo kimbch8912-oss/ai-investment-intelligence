@@ -1,0 +1,5 @@
+# M4-A Decision History Design
+
+M4-A preserves immutable M2 snapshots, M3 run envelopes, and normalized CIO decisions without storing credentials or applying a migration. `analysis_snapshots` keeps queryable scores, risk, regimes, timestamps, config versions, domain detail, and evidence. `agent_runs` preserves each run ID and raw structured output; retry history is retained through unique run IDs. `cio_decisions` normalizes the query-facing CIO result, with scenarios, invalidations, and monitoring priorities as children.
+
+All foreign keys use `ON DELETE RESTRICT` to protect audit history. UUID primary keys, `snapshot_key` uniqueness, and `run_id`/CIO-run uniqueness provide idempotency. Timestamps are UTC `timestamptz`; data cutoff, analysis, decision, start, finish, and creation times remain distinct. Queryable scores/regimes are columns; components, evidence, output, errors, and lists are JSONB. No probability or prediction structures exist. BASE exactly once is enforced by writer validation because a row constraint cannot require a future child row; uniqueness prevents duplicate BASE. Public-schema access is deferred to M4-B server-only/RLS design.

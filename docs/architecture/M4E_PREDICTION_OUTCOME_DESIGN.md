@@ -1,0 +1,3 @@
+# M4-E Prediction / Outcome Design
+
+Predictions are explicit, observable future checks derived from a CIO decision, never trade recommendations or performance claims. `predictions` stores an immutable statement, controlled type/direction/horizon, evidence IDs, and decision linkage. `prediction_targets` defines what will later be measured; it does not calculate outcomes. `prediction_outcomes` preserves evaluator-version history with controlled result status. All foreign keys use RESTRICT. Deterministic evaluation, accuracy, calibration, return/performance analysis, scheduling, and UI are deferred.

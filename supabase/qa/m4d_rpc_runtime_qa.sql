@@ -1,0 +1,17 @@
+BEGIN;
+DO $$ DECLARE s uuid; r uuid; d uuid; BEGIN
+INSERT INTO analysis_snapshots(snapshot_key,data_as_of_time,analysis_time,market_status,macro_status,risk_level,raw_regime,stable_regime,divergence_status,divergence_direction,m2_config_versions,domain_scores) VALUES('m4d-qa',now(),now(),'VALID','VALID','HIGH','CAUTION','CAUTION','DIVERGENCE','MARKET_ABOVE_MACRO','[]','[]') RETURNING id INTO s;
+INSERT INTO agent_runs(analysis_snapshot_id,run_id,agent,agent_version,prompt_version,status,started_at,finished_at) VALUES(s,'m4d-cio','cio','m3i-v1','cio-agent-v1','COMPLETED',now(),now()) RETURNING id INTO r;
+SELECT persist_cio_decision_bundle(s,r,'{"investment_stance":"DEFENSIVE","confidence":0.8,"summary":"qa","data_as_of_time":"2026-08-20T00:00:00Z","decision_time":"2026-08-20T00:01:00Z","status":"VALID"}','[{"scenario_type":"BASE","description":"x"},{"scenario_type":"BULL","description":"x"},{"scenario_type":"BEAR","description":"x"}]','[{"condition_type":"RISK_CHANGE","description":"x"}]','[{"monitor_type":"EVIDENCE","label":"x"}]') INTO d;
+IF (SELECT count(*) FROM cio_scenarios WHERE cio_decision_id=d)<>3 THEN RAISE EXCEPTION 'bundle failed'; END IF;
+PERFORM persist_cio_decision_bundle(s,r,'{"investment_stance":"DEFENSIVE","confidence":0.8,"summary":"qa","data_as_of_time":"2026-08-20T00:00:00Z","decision_time":"2026-08-20T00:01:00Z","status":"VALID"}','[]','[]','[]');
+IF (SELECT count(*) FROM cio_decisions WHERE cio_agent_run_id=r)<>1 THEN RAISE EXCEPTION 'duplicate'; END IF;
+  INSERT INTO agent_runs(analysis_snapshot_id,run_id,agent,agent_version,prompt_version,status,started_at,finished_at) VALUES(s,'m4d-bad','cio','m3i-v1','cio-agent-v1','COMPLETED',now(),now()) RETURNING id INTO r;
+  BEGIN PERFORM persist_cio_decision_bundle(s,r,'{"investment_stance":"DEFENSIVE","confidence":0.8,"summary":"qa","data_as_of_time":"2026-08-20T00:00:00Z","decision_time":"2026-08-20T00:01:00Z","status":"VALID"}','[{"scenario_type":"BASE","description":"x"},{"scenario_type":"CRASH","description":"x"}]','[]','[]'); RAISE EXCEPTION 'atomic failure missing'; EXCEPTION WHEN check_violation THEN NULL; END;
+  IF (SELECT count(*) FROM cio_decisions WHERE cio_agent_run_id=r)<>0 THEN RAISE EXCEPTION 'partial decision'; END IF;
+  BEGIN PERFORM persist_cio_decision_bundle('00000000-0000-0000-0000-000000000000',r,'{"investment_stance":"DEFENSIVE","confidence":0.8,"summary":"qa","data_as_of_time":"2026-08-20T00:00:00Z","decision_time":"2026-08-20T00:01:00Z","status":"VALID"}','[]','[]','[]'); RAISE EXCEPTION 'snapshot FK missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN PERFORM persist_cio_decision_bundle(s,'00000000-0000-0000-0000-000000000000','{"investment_stance":"DEFENSIVE","confidence":0.8,"summary":"qa","data_as_of_time":"2026-08-20T00:00:00Z","decision_time":"2026-08-20T00:01:00Z","status":"VALID"}','[]','[]','[]'); RAISE EXCEPTION 'run FK missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN SET LOCAL ROLE anon; PERFORM persist_cio_decision_bundle(s,r,'{}','[]','[]','[]'); RAISE EXCEPTION 'anon execute allowed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+  BEGIN SET LOCAL ROLE authenticated; PERFORM persist_cio_decision_bundle(s,r,'{}','[]','[]','[]'); RAISE EXCEPTION 'authenticated execute allowed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+END $$;
+SELECT 'PASS' status,'M4-D0.2 atomic RPC runtime QA' test_name; ROLLBACK;

@@ -1,0 +1,4 @@
+import { result } from './common.ts';
+import { decimalNumber, sortMarket } from '../validators.ts';
+import type { CalculationResult, MarketPricePoint } from '../types.ts';
+export function marketReturn(points: MarketPricePoint[], lookback: number): CalculationResult { const data = sortMarket(points); const current = data.at(-1); const previous = data.at(-(lookback + 1)); if (!current || !previous) return result(`return_${lookback}d`, null, 'ratio', current?.marketTime ?? null, lookback, data.length, 'INSUFFICIENT_DATA'); const a = decimalNumber(current.close); const b = decimalNumber(previous.close); if (a === null || b === null || b === 0) return result(`return_${lookback}d`, null, 'ratio', current.marketTime, lookback, data.length, 'INVALID_INPUT'); return result(`return_${lookback}d`, a / b - 1, 'ratio', current.marketTime, lookback, data.length, 'VALID'); }

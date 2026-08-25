@@ -1,0 +1,1 @@
+export const compositeConfig = { version: 'm2d-v1', market: [['momentum', .4], ['trend', .4], ['risk', .2]], macro: [['rates', .25], ['inflation', .25], ['growth', .3], ['liquidity', .2]], minimumCoverage: .6, riskPenaltyWeight: .3, divergenceThreshold: 30 } as const;

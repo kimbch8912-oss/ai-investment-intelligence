@@ -1,0 +1,1 @@
+export const stabilityConfig={version:'m2f-v1',deteriorationConfirmationCount:2,recoveryConfirmationCount:3,strongBullConfirmationCount:3,crisisRecoveryConfirmationCount:3,emergencyRiskThreshold:90,crisisImmediateTransition:true,minimumTransitionConfidence:.6,unknownTolerance:1} as const;

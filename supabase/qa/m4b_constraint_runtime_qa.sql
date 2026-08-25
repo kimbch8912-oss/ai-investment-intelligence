@@ -1,0 +1,26 @@
+BEGIN;
+DO $$
+DECLARE s uuid; r uuid; d uuid; n integer;
+BEGIN
+  SELECT count(*) INTO n FROM pg_class c JOIN pg_namespace p ON p.oid=c.relnamespace WHERE p.nspname='public' AND c.relname IN ('analysis_snapshots','agent_runs','cio_decisions','cio_scenarios','decision_invalidation_conditions','decision_monitoring_priorities');
+  IF n<>6 THEN RAISE EXCEPTION 'catalog tables expected 6, got %',n; END IF;
+  INSERT INTO analysis_snapshots(snapshot_key,data_as_of_time,analysis_time,market_score,market_status,macro_score,macro_status,risk_score,risk_level,raw_regime,stable_regime,divergence_status,divergence_direction,m2_config_versions,domain_scores,evidence) VALUES('m4b-runtime-constraint-qa-002','2026-08-20 00:00+00','2026-08-20 00:05+00',72,'VALID',45,'VALID',82,'HIGH','CAUTION','CAUTION','DIVERGENCE','MARKET_ABOVE_MACRO','["m2b-v1","m2c-v1","m2d-v1","m2e-v1","m2f-v1"]','[{"nested":{"v":1}}]','[{"id":"e"}]') RETURNING id INTO s;
+  INSERT INTO agent_runs(analysis_snapshot_id,run_id,agent,agent_version,prompt_version,status,started_at,finished_at,output,errors) VALUES(s,'qa-cio','cio','m3i-v1','cio-agent-v1','COMPLETED','2026-08-20 00:06+00','2026-08-20 00:07+00','{"nested":{"v":1}}','[{"code":"x"}]') RETURNING id INTO r;
+  INSERT INTO cio_decisions(analysis_snapshot_id,cio_agent_run_id,investment_stance,confidence,summary,data_as_of_time,decision_time,status,supporting_evidence,counter_evidence) VALUES(s,r,'DEFENSIVE',.8,'qa','2026-08-20 00:00+00','2026-08-20 00:08+00','VALID','[{"id":"e"}]','[{"id":"c"}]') RETURNING id INTO d;
+  INSERT INTO cio_scenarios(cio_decision_id,scenario_type,description) VALUES(d,'BASE','x'),(d,'BULL','x'),(d,'BEAR','x'); INSERT INTO decision_invalidation_conditions(cio_decision_id,condition_type,description) VALUES(d,'RISK_CHANGE','x'); INSERT INTO decision_monitoring_priorities(cio_decision_id,monitor_type,label) VALUES(d,'EVIDENCE','e');
+  BEGIN INSERT INTO analysis_snapshots(snapshot_key,data_as_of_time,analysis_time,market_status,macro_status,risk_level,raw_regime,stable_regime,divergence_status,divergence_direction,m2_config_versions,domain_scores) VALUES('m4b-runtime-constraint-qa-002',now(),now(),'VALID','VALID','HIGH','CAUTION','CAUTION','DIVERGENCE','MARKET_ABOVE_MACRO','[]','[]'); RAISE EXCEPTION 'snapshot unique missing'; EXCEPTION WHEN unique_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_scenarios(cio_decision_id,scenario_type,description) VALUES(d,'BASE','x'); RAISE EXCEPTION 'scenario unique missing'; EXCEPTION WHEN unique_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_scenarios(cio_decision_id,scenario_type,description) VALUES(d,'CRASH','x'); RAISE EXCEPTION 'scenario check missing'; EXCEPTION WHEN check_violation THEN NULL; END;
+  BEGIN INSERT INTO agent_runs(analysis_snapshot_id,run_id,agent,agent_version,prompt_version,status,started_at,finished_at) VALUES('00000000-0000-0000-0000-000000000000','invalid-fk-agent','macro','m3a-v1','macro-agent-v1','COMPLETED',now(),now()); RAISE EXCEPTION 'agent FK missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_decisions(analysis_snapshot_id,cio_agent_run_id,investment_stance,confidence,summary,data_as_of_time,decision_time,status) VALUES(s,'00000000-0000-0000-0000-000000000000','DEFENSIVE',.8,'x',now(),now(),'VALID'); RAISE EXCEPTION 'decision run FK missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_scenarios(cio_decision_id,scenario_type,description) VALUES('00000000-0000-0000-0000-000000000000','BASE','x'); RAISE EXCEPTION 'scenario FK missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN DELETE FROM analysis_snapshots WHERE id=s; RAISE EXCEPTION 'snapshot RESTRICT missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN DELETE FROM agent_runs WHERE id=r; RAISE EXCEPTION 'run RESTRICT missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN DELETE FROM cio_decisions WHERE id=d; RAISE EXCEPTION 'decision RESTRICT missing'; EXCEPTION WHEN foreign_key_violation THEN NULL; END;
+  BEGIN INSERT INTO agent_runs(analysis_snapshot_id,run_id,agent,agent_version,prompt_version,status,started_at,finished_at) VALUES(s,'qa-cio','macro','m3a-v1','macro-agent-v1','COMPLETED',now(),now()); RAISE EXCEPTION 'run unique missing'; EXCEPTION WHEN unique_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_decisions(analysis_snapshot_id,cio_agent_run_id,investment_stance,confidence,summary,data_as_of_time,decision_time,status) VALUES(s,r,'DEFENSIVE',.8,'x',now(),now(),'VALID'); RAISE EXCEPTION 'decision unique missing'; EXCEPTION WHEN unique_violation THEN NULL; END;
+  BEGIN INSERT INTO cio_decisions(analysis_snapshot_id,cio_agent_run_id,investment_stance,confidence,summary,data_as_of_time,decision_time,status) VALUES(s,r,'VERY_BULLISH',.8,'x',now(),now(),'VALID'); RAISE EXCEPTION 'stance check missing'; EXCEPTION WHEN check_violation THEN NULL; END;
+  IF (SELECT count(*) FROM agent_runs WHERE analysis_snapshot_id=s)<>1 OR (SELECT count(*) FROM cio_scenarios WHERE cio_decision_id=d)<>3 THEN RAISE EXCEPTION 'reconstruction failed'; END IF;
+END $$;
+SELECT 'PASS' AS status,'M4-B.1A3 constraint runtime QA' AS test_name,current_setting('server_version') AS postgres_version;
+ROLLBACK;

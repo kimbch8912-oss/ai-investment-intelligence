@@ -1,0 +1,8 @@
+export type CalculationStatus = 'VALID' | 'INSUFFICIENT_DATA' | 'INVALID_INPUT';
+export interface CalculationResult { metric: string; value: number | null; unit: 'ratio' | 'percent' | 'price' | 'bp'; asOfTime: string | null; lookback: number; inputCount: number; status: CalculationStatus }
+export interface MarketPricePoint { assetId: string; marketTime: string; close: string }
+export interface EconomicPoint { seriesId: string; observationDate: string; value: string; vintageAt: string }
+export interface MarketSignalSnapshot { assetId: string; asOfTime: string; return1d: CalculationResult; return5d: CalculationResult; return20d: CalculationResult; ma5: CalculationResult; ma20: CalculationResult; ma60: CalculationResult; priceVsMa5: CalculationResult; priceVsMa20: CalculationResult; priceVsMa60: CalculationResult; volatility20dDaily: CalculationResult; volatility20dAnnualized: CalculationResult; currentDrawdown: CalculationResult; maxDrawdown60d: CalculationResult }
+export interface EconomicSignalSnapshot { seriesId: string; asOfTime: string; latestValue: CalculationResult; absoluteChange: CalculationResult; percentageChange: CalculationResult; mom: CalculationResult; yoy: CalculationResult }
+export type SignalDirection = 'STRONG_POSITIVE' | 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'STRONG_NEGATIVE' | 'UNKNOWN';
+export interface StructuredSignal { signal: string; direction: SignalDirection; strength: number | null; asOfTime: string | null; evidence: Array<{ metric: string; value: number | null; status: CalculationStatus }>; inputs: string[]; status: 'VALID' | 'UNKNOWN'; reason: string; configVersion: string; state?: string }

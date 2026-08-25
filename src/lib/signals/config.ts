@@ -1,0 +1,1 @@
+export const signalConfig = { version: 'm2b-v1', momentum: { neutral: 0.002, strong: 0.05 }, trend: { neutral: 0.002 }, volatility: { elevated: 0.02, high: 0.04 }, drawdown: { elevated: -0.05, high: -0.15 }, rates: { neutralBp: 5, strongBp: 20 }, yieldCurve: { steep: 0.75, positive: 0.1, flat: -0.1, inverted: -0.75 }, economic: { stable: 0.002, strong: 0.02 } } as const;

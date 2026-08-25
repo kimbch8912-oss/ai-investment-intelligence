@@ -1,0 +1,10 @@
+import { scoringConfig } from './config.ts'; import { buildDomainScore } from './domain-score.ts'; import type { StructuredSignal } from '../signals/types.ts';
+const pick = (signals: StructuredSignal[], name: string) => signals.find((item) => item.signal === name);
+const domain = (name: keyof typeof scoringConfig.weights, signals: StructuredSignal[], options = {}) => buildDomainScore(name, scoringConfig.weights[name].map(([signal, weight]) => ({ signal: pick(signals, signal), weight })), options);
+export const momentumScore = (signals: StructuredSignal[]) => domain('momentum', signals);
+export const trendScore = (signals: StructuredSignal[]) => domain('trend', signals);
+export const ratesScore = (signals: StructuredSignal[]) => domain('rates', signals, { invert: true });
+export const inflationScore = (signals: StructuredSignal[]) => domain('inflation', signals, { invert: true });
+export const growthScore = (signals: StructuredSignal[]) => domain('growth', signals);
+export const liquidityScore = (signals: StructuredSignal[]) => domain('liquidity', signals);
+export const riskScore = (signals: StructuredSignal[]) => domain('risk', signals, { risk: true });

@@ -1,0 +1,1 @@
+export const regimeConfig={version:'m2e-v1',minimumConfidence:.6,bands:{strongBull:80,bull:65,neutral:45,caution:30,bear:15},macroStrong:65,macroWeak:45,riskHigh:75,riskExtreme:85,crisis:{market:20,macro:35,risk:85},divergenceThreshold:30,riskAdjustedStrongBullFloor:65} as const;

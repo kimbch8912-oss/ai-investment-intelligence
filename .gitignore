@@ -1,0 +1,17 @@
+# dependencies
+/node_modules
+
+# Next.js build output
+/.next
+/out
+
+# local environment files and secrets
+.env
+.env.local
+.env.*.local
+
+# TypeScript build metadata
+*.tsbuildinfo
+
+# Vercel project linkage
+.vercel

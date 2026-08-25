@@ -1,0 +1,28 @@
+{
+  "name": "ai-investment-intelligence",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "qa:cio": "tsx src/lib/agents/qa/fixture-cio-agent-qa.ts",
+    "qa:supabase-server": "node --env-file=.env.local --import tsx src/lib/supabase/qa/server-client-smoke-qa.ts",
+    "qa:persistence": "node --env-file=.env.local --import tsx src/lib/persistence/qa/fixture-persistence-writer-qa.ts",
+    "qa:cio-persistence": "node --env-file=.env.local --import tsx src/lib/persistence/qa/fixture-cio-decision-writer-qa.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "next": "^16.3.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  }
+}
