@@ -10,6 +10,7 @@ import { StockLiveDataOrchestrator } from './stock-live-data-orchestrator.ts';
 import type { LiveDataSnapshot, SourceError } from './types.ts';
 import { liveDataMetadata, type StockAnalysisViewModel } from './stock-analysis-view-model.ts';
 import { runLiveStockReport } from '../stock-analysis/report/stock-report-agent.ts';
+import { loadLiveMacroGlobal } from './macro-global-live.ts';
 
 const unknownNews: NewsContext = { status: 'UNKNOWN', confidence: null, asOfTime: null, evidence: [], items: [], unknowns: ['News provider is unavailable.'] };
 const unknownResearch: ResearchContext = { status: 'UNKNOWN', confidence: null, asOfTime: null, evidence: [], items: [], unknowns: ['Research provider is unavailable.'] };
@@ -20,7 +21,7 @@ const average = (values: readonly number[], length: number, index: number) => { 
 export type StockLiveDashboardResult = { kind: 'ready'; viewModel: StockAnalysisViewModel; snapshot: LiveDataSnapshot } | { kind: 'failed'; snapshot: LiveDataSnapshot; errors: readonly SourceError[] };
 
 export async function loadStockLiveDashboard(asset: AssetRecord, identifiers: readonly AssetIdentifierRecord[], analysisTime = new Date().toISOString()): Promise<StockLiveDashboardResult> {
-  const result = await new StockLiveDataOrchestrator().run({ asset, identifiers, analysisTime, from: new Date(Date.parse(analysisTime) - 370 * 86_400_000).toISOString(), to: analysisTime, providers: { market: new TwelveDataGlobalMarketProvider(), fundamental: new AlphaVantageFundamentalProvider(), news: new AlphaVantageNewsProvider() } });
+  const shared = await loadLiveMacroGlobal(analysisTime); const result = await new StockLiveDataOrchestrator().run({ asset, identifiers, analysisTime, from: new Date(Date.parse(analysisTime) - 370 * 86_400_000).toISOString(), to: analysisTime, providers: { market: new TwelveDataGlobalMarketProvider(), fundamental: new AlphaVantageFundamentalProvider(), news: new AlphaVantageNewsProvider() }, macroContext: shared.macro, globalMarketContext: shared.global });
   if (!result.snapshot.marketData.data || !['READY', 'PARTIAL'].includes(result.snapshot.marketData.status)) return { kind: 'failed', snapshot: result.snapshot, errors: result.snapshot.marketData.errors };
   const news: NewsContext = result.snapshot.newsData.data ? { status: result.snapshot.newsData.status === 'READY' ? 'AVAILABLE' : 'PARTIAL', confidence: result.snapshot.newsData.data.documents.length ? 1 : null, asOfTime: result.snapshot.newsData.freshness.dataAsOfTime, evidence: [], items: result.snapshot.newsData.data.documents, unknowns: result.snapshot.newsData.errors.map((error) => error.code) } : unknownNews;
   const analysis = await runStockAnalysisAgent({ request: result.request, asset: result.snapshot.asset, technical: result.pipeline.technicalSignals, fundamental: result.pipeline.fundamental, industry: result.pipeline.industry, macro: null, koreaMarket: null, globalMarket: null, news, research: unknownResearch, risk: null, asOfTime: result.snapshot.asOfTime }, new DeterministicStockAnalysisFixtureClient());
