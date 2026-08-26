@@ -3,6 +3,7 @@ import { StockDashboard } from '../../../src/components/stock-dashboard/stock-da
 import { stockAnalysisFixtures } from '../../../src/dashboard/fixtures/stock-analysis-fixtures';
 import { loadStockLiveDashboard } from '../../../src/lib/live-data/stock-live-dashboard';
 import { resolveUsEquity } from '../../../src/lib/live-data/stock-asset-resolver';
+import { resolveKoreaStock } from '../../../src/lib/live-data/providers/korea/symbol-resolver';
 
 type Props = { params: Promise<{ symbol: string }> };
 
@@ -19,8 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function StockPage({ params }: Props) {
   const { symbol } = await params;
   const fixture = findFixture(symbol);
-  if (fixture?.symbol === '005930') return <div id="app"><aside className="side"><b>Stock Intelligence</b><small>Analysis Dashboard</small><p>ANALYSIS</p><span>종목 분석</span><p>DATA STATUS</p><small>Fixture 모드</small></aside><div className="page-content"><StockDashboard fixture={fixture} /></div></div>;
-  const resolved = await resolveUsEquity(symbol);
+  const resolved = resolveKoreaStock(symbol) ?? await resolveUsEquity(symbol);
   if (!resolved) return <div id="app"><aside className="side"><b>Stock Intelligence</b><small>Analysis Dashboard</small></aside><main className="main"><section className="card"><p>STOCK SEARCH</p><h1>분석 불가 종목</h1><p>현재 분석 가능한 데이터를 찾지 못했습니다.</p><small>미국 NASDAQ, NYSE, NYSE American의 개별 보통주만 지원합니다.</small></section></main></div>;
   const live = await loadStockLiveDashboard(resolved.asset, resolved.identifiers);
   if (live.kind === 'ready') return <div id="app"><aside className="side"><b>Stock Intelligence</b><small>Analysis Dashboard</small><p>ANALYSIS</p><span>종목 분석</span><p>DATA STATUS</p><small>LIVE · {live.snapshot.marketData.freshness.freshnessStatus}</small></aside><div className="page-content"><StockDashboard fixture={live.viewModel} /></div></div>;

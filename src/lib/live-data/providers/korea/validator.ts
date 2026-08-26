@@ -1,0 +1,2 @@
+import type { OhlcvBar } from '../../types.ts';
+export const validKoreaBars = (bars: readonly OhlcvBar[], analysisTime: string) => bars.length >= 1 && bars.every((bar, index) => bar.timestamp <= analysisTime && bar.open > 0 && bar.high >= Math.max(bar.open,bar.close,bar.low) && bar.low <= Math.min(bar.open,bar.close,bar.high) && bar.volume >= 0 && (!index || bars[index - 1].timestamp < bar.timestamp));
