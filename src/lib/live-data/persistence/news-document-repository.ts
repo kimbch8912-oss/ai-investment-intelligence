@@ -1,0 +1,7 @@
+import { createServerSupabaseClient } from '../../supabase/server-client.ts';
+import type { NewsDocument } from '../../agents/news/types.ts';
+const key=(document:NewsDocument)=>String(document.metadata?.documentKey ?? '');
+export class NewsDocumentRepository { private readonly db=createServerSupabaseClient();
+  async read(sourceId:string,symbol:string,analysisTime:string,limit:number){const r=await this.db.from('news_documents').select('*').eq('source_id',sourceId).lte('published_at',analysisTime).contains('affected_assets',[{symbol}]).order('published_at',{ascending:false}).limit(limit);if(r.error)throw Error(r.error.message);return r.data??[]}
+  async insert(sourceId:string,documents:readonly NewsDocument[]){let inserted=0,skipped=0;for(const d of documents){const documentKey=key(d);if(!documentKey)throw Error('NEWS_DOCUMENT_KEY_REQUIRED');const r=await this.db.from('news_documents').upsert({source_id:sourceId,provider_document_id:String(d.metadata?.providerDocumentId??documentKey),document_key:documentKey,source_tier:d.sourceTier,title:d.title,summary:d.summary??null,url:String(d.metadata?.url??''),published_at:d.publishedAt,retrieved_at:d.retrievedAt,categories:d.categories,affected_assets:d.affectedAssets,facts:d.facts,duplicate_group:d.duplicateGroupId??null,status:'READY'},{onConflict:'document_key',ignoreDuplicates:true});if(r.error)throw Error(r.error.message);inserted++}return{inserted,skipped}}
+}
