@@ -12,7 +12,10 @@ export class LiveEconomicObservationRepository {
     return this.readBySeriesId(definition.id, series, definition.frequency, analysisTime);
   }
   async readBySeriesId(seriesId: string, series: string, frequency: string, analysisTime: string): Promise<readonly FredObservation[]> {
-    const result = await this.db.from('economic_observations').select('observation_date,value,vintage_at,retrieved_at').eq('series_id', seriesId).lte('vintage_at', analysisTime).order('observation_date', { ascending: true });
+    // PostgREST caps an unpaginated response at 1,000 rows. Read the newest
+    // observations first so a long-lived series cannot make its current
+    // snapshot appear stale merely because older history filled that cap.
+    const result = await this.db.from('economic_observations').select('observation_date,value,vintage_at,retrieved_at').eq('series_id', seriesId).lte('vintage_at', analysisTime).order('observation_date', { ascending: false }).order('vintage_at', { ascending: false });
     if (result.error) throw Error(`ECONOMIC_CACHE_READ: ${result.error.message}`);
     // A later vintage supersedes an earlier vintage only for this read.  Both
     // rows remain in the database so historical analysis remains reproducible.

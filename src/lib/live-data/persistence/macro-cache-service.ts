@@ -13,7 +13,7 @@ const maxAgeMs = (series: FredSeriesId) => daily.has(series) ? 3 * 86_400_000 : 
 const expiredAgeMs = (series: FredSeriesId) => maxAgeMs(series) * 4;
 const latest = (items: readonly FredObservation[]) => items.at(-1) ?? null;
 const age = (item: FredObservation|null, analysisTime: string) => item ? Date.parse(analysisTime) - Date.parse(`${item.observationDate}T23:59:59.999Z`) : Infinity;
-const recentlyRetrieved = (items: readonly FredObservation[], analysisTime: string) => items.some(item => Date.parse(analysisTime) - Date.parse(item.retrievedAt) <= 60 * 60 * 1000);
+const recentlyRetrieved = (items: readonly FredObservation[], series: FredSeriesId, analysisTime: string) => items.some(item => Date.parse(analysisTime) - Date.parse(item.retrievedAt) <= maxAgeMs(series));
 
 export class MacroCacheService {
   constructor(private readonly provider: Provider, private readonly observations: Repository = new LiveEconomicObservationRepository(), private readonly registration: Registration = new FredSeriesRegistrationService()) {}
@@ -22,9 +22,9 @@ export class MacroCacheService {
     if (!definition) return this.empty('UNAVAILABLE', ['FRED_SERIES_NOT_REGISTERED']);
     const cached = (await this.observations.readBySeriesId(definition.id, series, definition.frequency, analysisTime)).filter(item => validObservation(item, analysisTime));
     const cachedLatest = latest(cached); const cachedAge = age(cachedLatest, analysisTime);
-    // A just-completed read-through is reusable for the same analysis window,
-    // even when a lower-frequency source has not published a new observation.
-    if (cached.length && (cachedAge <= maxAgeMs(series) || recentlyRetrieved(cached, analysisTime))) return this.result(cached, 'HIT', 'FRESH', [], 0);
+    // A recently retrieved snapshot is fresh for that series' own cadence,
+    // even when a monthly or quarterly source has not published a new value.
+    if (cached.length && (cachedAge <= maxAgeMs(series) || recentlyRetrieved(cached, series, analysisTime))) return this.result(cached, 'HIT', 'FRESH', [], 0);
     const live = await this.provider.getSeries(series, analysisTime);
     const usable = live.observations.filter(item => validObservation(item, analysisTime));
     if (usable.length) {
