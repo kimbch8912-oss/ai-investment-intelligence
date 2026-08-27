@@ -13,6 +13,7 @@
     "qa:fundamental-cache-server": "node --env-file=.env.local --import tsx src/lib/live-data/persistence/qa/server-fundamental-cache-qa.ts",
     "qa:fundamental-provider": "tsx src/lib/live-data/providers/fundamental/qa/alpha-vantage-fundamental-provider-qa.ts",
     "qa:news-cache": "tsx src/lib/live-data/persistence/qa/news-cache-qa.ts",
+    "qa:unified-data-health": "tsx src/lib/live-data/qa/fixture-unified-data-health-qa.ts",
     "qa:macro-cache-server": "node --env-file=.env.local --import tsx src/lib/live-data/persistence/qa/server-macro-cache-qa.ts",
     "qa:supabase-server": "node --env-file=.env.local --import tsx src/lib/supabase/qa/server-client-smoke-qa.ts",
     "qa:persistence": "node --env-file=.env.local --import tsx src/lib/persistence/qa/fixture-persistence-writer-qa.ts",
