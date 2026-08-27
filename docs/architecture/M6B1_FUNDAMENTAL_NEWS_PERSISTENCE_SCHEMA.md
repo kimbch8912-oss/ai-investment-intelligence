@@ -1,0 +1,3 @@
+# M6-B1 Fundamental + News Persistence Schema
+
+`fundamental_snapshots` preserves period/data-as-of history. Its identity uses `COALESCE(fiscal_period, E'\\u0000')` so NULL periods remain idempotent. `news_documents` uses deterministic `document_key`, plus a partial source/provider identifier index when supplied. Metrics and document arrays are stored losslessly in numeric/JSONB columns. Both tables reference canonical parents with `ON DELETE RESTRICT`, have RLS enabled and deliberately have no policies; server-only service-role access is required. Events and asset junctions are deferred to M6-B2 after ingest evidence is available.
