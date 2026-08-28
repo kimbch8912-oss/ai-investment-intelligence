@@ -8,6 +8,7 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "qa:dashboard-data-health": "tsx src/components/stock-dashboard/qa/data-health-ui-qa.ts",
+    "qa:canonical-us-resolver": "tsx src/lib/live-data/qa/canonical-us-resolver-qa.ts",
     "qa:cio": "tsx src/lib/agents/qa/fixture-cio-agent-qa.ts",
     "qa:macro-cache": "tsx src/lib/live-data/persistence/qa/macro-cache-qa.ts",
     "qa:fundamental-cache": "tsx src/lib/live-data/persistence/qa/fundamental-cache-qa.ts",

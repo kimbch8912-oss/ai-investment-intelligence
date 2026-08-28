@@ -1,5 +1,7 @@
 import type { AssetIdentifierRecord, AssetRecord } from '../stock-analysis/types.ts';
 import { liveCache } from './live-cache.ts';
+import { AssetRegistrationService } from './persistence/asset-registration-service.ts';
+import type { RegisteredAsset } from './persistence/asset-registration-repository.ts';
 
 export type StockSearchResult = { symbol: string; name: string; exchange: 'NASDAQ' | 'NYSE' | 'NYSE American'; country: 'US'; currency: string; type: 'Common Stock'; providerIdentifier: string };
 const exchanges = new Set(['NASDAQ', 'NYSE', 'NYSE American', 'NYSE MKT']);
@@ -29,10 +31,20 @@ async function fetchSearch(query: string): Promise<readonly StockSearchResult[]>
 }
 
 export async function searchUsEquities(query: string) { return fetchSearch(query); }
-export async function resolveUsEquity(symbol: string): Promise<{ asset: AssetRecord; identifiers: readonly AssetIdentifierRecord[] } | null> {
+type Resolution = { asset: AssetRecord; identifiers: readonly AssetIdentifierRecord[] };
+type ResolverDependencies = { canonical?: Pick<AssetRegistrationService, 'resolveUs'>; search?: (query: string) => Promise<readonly StockSearchResult[]> };
+const fromCanonical = (asset: RegisteredAsset, symbol: string): Resolution | null => {
+  const row = asset as RegisteredAsset & { asset_type?: string; is_active?: boolean };
+  const assetType = row.assetType ?? row.asset_type;
+  const isActive = row.isActive ?? row.is_active;
+  if (asset.symbol !== symbol || assetType !== 'STOCK' || asset.country !== 'US' || !isActive || !asset.exchange || !['NASDAQ', 'NYSE', 'NYSE American'].includes(asset.exchange)) return null;
+  return { asset: { id: asset.id, symbol: asset.symbol, name: asset.name, assetType: 'STOCK', exchange: asset.exchange, country: asset.country, currency: asset.currency, timezone: asset.timezone, isActive }, identifiers: [{ assetId: asset.id, identifierType: 'TICKER', identifierValue: symbol, isActive: true }] };
+};
+export async function resolveUsEquity(symbol: string, dependencies: ResolverDependencies = {}): Promise<Resolution | null> {
   const normalized = symbol.trim().toUpperCase();
   if (!/^[A-Z][A-Z.\-]{0,9}$/.test(normalized)) return null;
-  const result = (await fetchSearch(normalized)).find((item) => item.symbol === normalized);
+  try { const canonical = await (dependencies.canonical ?? new AssetRegistrationService()).resolveUs(normalized); if (canonical) return fromCanonical(canonical, normalized); } catch { /* Provider fallback intentionally preserves resolver availability. */ }
+  const result = (await (dependencies.search ?? fetchSearch)(normalized)).find((item) => item.symbol === normalized);
   if (!result) return null;
   const asset: AssetRecord = { id: `twelve-data:${result.providerIdentifier}`, symbol: result.symbol, name: result.name, assetType: 'STOCK', exchange: result.exchange, country: result.country, currency: result.currency, timezone: 'America/New_York', isActive: true };
   return { asset, identifiers: [{ assetId: asset.id, identifierType: 'TWELVE_DATA_SYMBOL', identifierValue: result.providerIdentifier, isActive: true }] };
