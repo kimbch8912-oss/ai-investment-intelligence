@@ -32,7 +32,7 @@ async function fetchSearch(query: string): Promise<readonly StockSearchResult[]>
 
 export async function searchUsEquities(query: string) { return fetchSearch(query); }
 type Resolution = { asset: AssetRecord; identifiers: readonly AssetIdentifierRecord[] };
-type ResolverDependencies = { canonical?: Pick<AssetRegistrationService, 'resolveUs'>; search?: (query: string) => Promise<readonly StockSearchResult[]> };
+type ResolverDependencies = { canonical?: Pick<AssetRegistrationService, 'resolveUs'> & Partial<Pick<AssetRegistrationService, 'registerUs'>>; search?: (query: string) => Promise<readonly StockSearchResult[]> };
 const fromCanonical = (asset: RegisteredAsset, symbol: string): Resolution | null => {
   const row = asset as RegisteredAsset & { asset_type?: string; is_active?: boolean };
   const assetType = row.assetType ?? row.asset_type;
@@ -43,9 +43,11 @@ const fromCanonical = (asset: RegisteredAsset, symbol: string): Resolution | nul
 export async function resolveUsEquity(symbol: string, dependencies: ResolverDependencies = {}): Promise<Resolution | null> {
   const normalized = symbol.trim().toUpperCase();
   if (!/^[A-Z][A-Z.\-]{0,9}$/.test(normalized)) return null;
-  try { const canonical = await (dependencies.canonical ?? new AssetRegistrationService()).resolveUs(normalized); if (canonical) return fromCanonical(canonical, normalized); } catch { /* Provider fallback intentionally preserves resolver availability. */ }
+  const registration = dependencies.canonical ?? new AssetRegistrationService();
+  try { const canonical = await registration.resolveUs(normalized); if (canonical) return fromCanonical(canonical, normalized); } catch { /* Provider fallback intentionally preserves resolver availability. */ }
   const result = (await (dependencies.search ?? fetchSearch)(normalized)).find((item) => item.symbol === normalized);
   if (!result) return null;
-  const asset: AssetRecord = { id: `twelve-data:${result.providerIdentifier}`, symbol: result.symbol, name: result.name, assetType: 'STOCK', exchange: result.exchange, country: result.country, currency: result.currency, timezone: 'America/New_York', isActive: true };
-  return { asset, identifiers: [{ assetId: asset.id, identifierType: 'TWELVE_DATA_SYMBOL', identifierValue: result.providerIdentifier, isActive: true }] };
+  if (!registration.registerUs) return null;
+  try { const registered = await registration.registerUs({ symbol: result.symbol, name: result.name, exchange: result.exchange, country: 'US', currency: 'USD', providerIdentifier: normalized }); const canonical = fromCanonical(registered, normalized); if (canonical) return canonical; } catch { try { const canonical = await registration.resolveUs(normalized); if (canonical) return fromCanonical(canonical, normalized); } catch { /* Existing provider resolution remains unavailable without canonical storage. */ } }
+  return null;
 }
