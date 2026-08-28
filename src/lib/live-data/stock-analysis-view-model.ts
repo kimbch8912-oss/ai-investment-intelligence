@@ -9,6 +9,6 @@ export function fixtureToStockAnalysisViewModel(fixture: StockAnalysisFixture): 
   return { ...fixture, chart: fixture.chart.map((point) => ({ ...point })), sourceMode: 'FIXTURE', sourceCoverage: 1, sourceStatuses: {} };
 }
 /** Live presentation is intentionally incomplete until M5-K supplies the existing M5-F/G output adapter. */
-export function liveDataMetadata(snapshot: LiveDataSnapshot) {
-  return { sourceMode: 'LIVE' as const, sourceCoverage: snapshot.coverage.ratio, sourceStatuses: { ...snapshot.sourceStatus }, dataHealth: stockHealth(health(snapshot.marketData),health(snapshot.macroContext),health(snapshot.fundamentalData),health(snapshot.newsData)) };
+export function liveDataMetadata(snapshot: LiveDataSnapshot, marketCacheStatus: import('./data-health.ts').DataSourceHealth['cacheStatus'] = 'UNKNOWN') {
+  return { sourceMode: 'LIVE' as const, sourceCoverage: snapshot.coverage.ratio, sourceStatuses: { ...snapshot.sourceStatus }, dataHealth: stockHealth(health(snapshot.marketData, marketCacheStatus),health(snapshot.macroContext),health(snapshot.fundamentalData),health(snapshot.newsData)) };
 }
