@@ -49,5 +49,6 @@ export async function resolveUsEquity(symbol: string, dependencies: ResolverDepe
   if (!result) return null;
   if (!registration.registerUs) return null;
   try { const registered = await registration.registerUs({ symbol: result.symbol, name: result.name, exchange: result.exchange, country: 'US', currency: 'USD', providerIdentifier: normalized }); const canonical = fromCanonical(registered, normalized); if (canonical) return canonical; } catch { try { const canonical = await registration.resolveUs(normalized); if (canonical) return fromCanonical(canonical, normalized); } catch { /* Existing provider resolution remains unavailable without canonical storage. */ } }
-  return null;
+  const asset: AssetRecord = { id: `twelve-data:${result.providerIdentifier}`, symbol: result.symbol, name: result.name, assetType: 'STOCK', exchange: result.exchange, country: result.country, currency: result.currency, timezone: 'America/New_York', isActive: true };
+  return { asset, identifiers: [{ assetId: asset.id, identifierType: 'TICKER', identifierValue: normalized, isActive: true }] };
 }
