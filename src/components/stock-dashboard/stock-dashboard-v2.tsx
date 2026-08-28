@@ -3,7 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { type StockAnalysisFixture } from '../../dashboard/fixtures/stock-analysis-fixtures.ts';
+import { type DataSourceHealth, type StockDataHealth } from '../../lib/live-data/data-health.ts';
 import type { StockAnalysisViewModel } from '../../lib/live-data/stock-analysis-view-model.ts';
+import '../../../app/data-health.module.css';
+import { dataHealthLabels, formatDataAsOfTime } from './data-health-ui.ts';
 
 const periods = ['1M', '3M', '6M', '1Y'] as const;
 
@@ -16,6 +19,23 @@ type SearchResult = {
   currency: string;
   type: string;
 };
+
+function DataHealthSummary({ dataHealth }: { dataHealth: StockDataHealth }) {
+  const guidance = dataHealth.globalStatus === 'PARTIAL' || dataHealth.globalStatus === 'DEGRADED' ? '일부 데이터가 제한된 상태에서 분석되었습니다.' : dataHealth.globalStatus === 'UNAVAILABLE' ? '현재 데이터가 부족해 판단 신뢰도가 제한됩니다.' : null;
+  const sources: Array<[string, DataSourceHealth]> = [['시세', dataHealth.market], ['거시경제', dataHealth.macro], ['재무', dataHealth.fundamental], ['뉴스', dataHealth.news]];
+  return <section className="data-health" aria-label="분석 데이터 상태">
+    <div className="data-health-heading"><div><p>DATA HEALTH</p><h2>분석 데이터 상태</h2></div><span className={`health-badge health-${String(dataHealth.globalStatus).toLowerCase()}`}>{dataHealthLabels.global(dataHealth.globalStatus)}</span></div>
+    {guidance ? <p className="health-guidance">{guidance}</p> : null}
+    <div className="health-sources">{sources.map(([name, source]) => {
+      const error = dataHealthLabels.error(source.errorCode, source.errorMessage);
+      return <article className="health-source" key={name}>
+        <div className="health-source-title"><h3>{name}</h3><strong>{dataHealthLabels.source(source.status)}</strong></div>
+        <dl><div><dt>출처</dt><dd>{source.source || '-'}</dd></div><div><dt>기준시점</dt><dd>{formatDataAsOfTime(source.dataAsOfTime)}</dd></div><div><dt>신선도</dt><dd>{dataHealthLabels.freshness(source.freshness)}</dd></div><div><dt>조회 상태</dt><dd>{dataHealthLabels.cache(source.cacheStatus)}</dd></div></dl>
+        {error ? <p className="health-error">{error}</p> : null}
+      </article>;
+    })}</div>
+  </section>;
+}
 
 const list = (items: string[]) => (
   <ul>
@@ -297,6 +317,8 @@ export function StockDashboardV2({
             </small>
           </aside>
         </section>
+
+        {fixture.dataHealth ? <DataHealthSummary dataHealth={fixture.dataHealth} /> : null}
 
         <p className="disc">
           본 분석은 투자 판단을 위한 참고 정보이며, 최종 투자 결정은 사용자 판단입니다.
