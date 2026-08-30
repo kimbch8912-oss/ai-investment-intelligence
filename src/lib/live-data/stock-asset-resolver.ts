@@ -2,6 +2,7 @@ import type { AssetIdentifierRecord, AssetRecord } from '../stock-analysis/types
 import { liveCache } from './live-cache.ts';
 import { AssetRegistrationService } from './persistence/asset-registration-service.ts';
 import type { RegisteredAsset } from './persistence/asset-registration-repository.ts';
+import { fetchWithTimeout } from './fetch-with-timeout.ts';
 
 export type StockSearchResult = { symbol: string; name: string; exchange: 'NASDAQ' | 'NYSE' | 'NYSE American'; country: 'US'; currency: string; type: 'Common Stock'; providerIdentifier: string };
 const exchanges = new Set(['NASDAQ', 'NYSE', 'NYSE American', 'NYSE MKT']);
@@ -22,7 +23,7 @@ async function fetchSearch(query: string): Promise<readonly StockSearchResult[]>
   const base = process.env.MARKET_DATA_BASE_URL ?? 'https://api.twelvedata.com';
   const url = `${base}/symbol_search?${new URLSearchParams({ symbol: query.trim() })}`;
   try {
-    const response = await fetch(url, { headers: { Authorization: `apikey ${key}` }, cache: 'force-cache', next: { revalidate: liveCache.symbolSearchSeconds, tags: [`symbol-search:${query.trim().toUpperCase()}`] } });
+    const response = await fetchWithTimeout(url, { headers: { Authorization: `apikey ${key}` }, cache: 'force-cache', next: { revalidate: liveCache.symbolSearchSeconds, tags: [`symbol-search:${query.trim().toUpperCase()}`] } } as RequestInit, 5_000);
     const payload = await response.json() as { data?: unknown[] };
     if (!response.ok || !Array.isArray(payload.data)) return [];
     const seen = new Set<string>();

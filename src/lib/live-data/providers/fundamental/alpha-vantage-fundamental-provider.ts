@@ -1,6 +1,7 @@
 import type { FundamentalDataProvider, AssetDataRequest } from '../../provider-contracts.ts';
 import type { FundamentalDataSnapshot, SourceEnvelope } from '../../types.ts';
 import { mapAlphaVantageFundamental } from './mapper.ts';
+import { fetchWithTimeout, isProviderTimeout } from '../../fetch-with-timeout.ts';
 const now = () => new Date().toISOString();
 const failed = (code: string, message: string): SourceEnvelope<FundamentalDataSnapshot> => ({ data: null, source: 'alpha-vantage-fundamental', status: 'FAILED', freshness: { retrievedAt: now(), dataAsOfTime: null, staleAfter: null, freshnessStatus: 'UNKNOWN' }, errors: [{ source: 'alpha-vantage-fundamental', code, message, retryable: code === 'PROVIDER_NETWORK_ERROR' }] });
 class ProviderFailure extends Error { constructor(readonly code: 'PROVIDER_QUOTA'|'PROVIDER_RATE_LIMIT'|'PROVIDER_AUTH_ERROR'|'PROVIDER_RESPONSE_ERROR') { super(code); } }
@@ -23,7 +24,7 @@ export class AlphaVantageFundamentalProvider implements FundamentalDataProvider 
     try {
       const base = process.env.ALPHA_VANTAGE_BASE_URL ?? 'https://www.alphavantage.co/query';
       const call = async (fn: string) => {
-        const response = await this.fetcher(`${base}?${new URLSearchParams({ function: fn, symbol: request.asset.symbol, apikey: key })}`, { cache: 'force-cache', next: { revalidate: 43_200, tags: [`fundamental:${request.asset.symbol}:${fn}`] } });
+        const response = await fetchWithTimeout(`${base}?${new URLSearchParams({ function: fn, symbol: request.asset.symbol, apikey: key })}`, { cache: 'force-cache', next: { revalidate: 43_200, tags: [`fundamental:${request.asset.symbol}:${fn}`] } } as RequestInit, 10_000, this.fetcher);
         if (!response.ok) throw new ProviderFailure('PROVIDER_RESPONSE_ERROR');
         let payload: unknown; try { payload = await response.json(); } catch { throw new ProviderFailure('PROVIDER_RESPONSE_ERROR'); }
         const failure = payloadFailure(payload); if (failure) throw failure;
@@ -35,7 +36,7 @@ export class AlphaVantageFundamentalProvider implements FundamentalDataProvider 
       return { data, source: 'alpha-vantage-fundamental', status: data.snapshot.quality.status === 'COMPLETE' ? 'READY' : 'PARTIAL', freshness: { retrievedAt, dataAsOfTime: asOf, staleAfter: null, freshnessStatus: 'UNKNOWN' }, errors: [] };
     } catch (error) {
       if (error instanceof ProviderFailure) return failed(error.code, error.code === 'PROVIDER_QUOTA' ? 'Provider quota response.' : error.code === 'PROVIDER_RATE_LIMIT' ? 'Provider rate-limit response.' : error.code === 'PROVIDER_AUTH_ERROR' ? 'Provider authentication response.' : 'Provider response is malformed or unsuccessful.');
-      return failed('PROVIDER_NETWORK_ERROR', 'Fundamental provider network request failed.');
+      return failed(isProviderTimeout(error) ? 'PROVIDER_TIMEOUT' : 'PROVIDER_NETWORK_ERROR', 'Fundamental provider network request failed.');
     }
   }
 }
